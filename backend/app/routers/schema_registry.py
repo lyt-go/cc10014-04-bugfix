@@ -65,6 +65,24 @@ def export_entries(
         headers={"Content-Disposition": 'attachment; filename="schema_registry.csv"'})
 
 
+@router.get("/field-sources")
+def get_field_sources(
+    table_name: str | None = Query(default=None, description="按表名称过滤当前字段来源"),
+) -> dict[str, object]:
+    """结构注册核对：每个目标字段只返回一个当前来源（来自字段映射版本表的生效版本）。"""
+    items = service.get_current_field_sources(table_name)
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/transitions")
+def get_transitions(
+    table_name: str | None = Query(default=None, description="按表名称过滤过渡版本"),
+) -> dict[str, object]:
+    """结构定义过渡版本：旧字段来源说明、边界扩大与缩窄均在此留痕。"""
+    items = service.get_transition_versions(table_name)
+    return {"items": items, "total": len(items)}
+
+
 @router.get("/{entry_id}", response_model=dict)
 def get_entry(entry_id: int) -> dict:
     """读取单条结构定义明细；不存在时给出可读的错误说明。"""

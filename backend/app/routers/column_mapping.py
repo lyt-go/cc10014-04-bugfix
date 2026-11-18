@@ -65,6 +65,42 @@ def export_entries(
         headers={"Content-Disposition": 'attachment; filename="column_mapping.csv"'})
 
 
+@router.get("/versions/table")
+def get_version_table(
+    rule_no: str | None = Query(default=None, description="按规则编号过滤版本表"),
+    entry_id: int | None = Query(default=None, description="按映射规则id过滤版本表"),
+) -> dict[str, object]:
+    """字段映射版本表：只保留单向状态推进记录与当前生效版本数据结果。"""
+    items = service.get_version_table(rule_no=rule_no, mapping_id=entry_id)
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/versions/effective")
+def get_effective_versions() -> dict[str, object]:
+    """当前生效版本数据结果：结构注册跨模块读取的数据源。"""
+    items = service.get_effective_versions()
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/versions/audit")
+def get_audit_trail(
+    rule_no: str | None = Query(default=None, description="按规则编号过滤审计留痕"),
+) -> dict[str, object]:
+    """状态流转、冲突拦截与事务回滚 Bugfix 恢复点的完整留痕。"""
+    items = service.get_audit_trail(rule_no=rule_no)
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/{entry_id}/versions")
+def get_entry_versions(entry_id: int) -> dict[str, object]:
+    """单条映射规则的字段映射版本表（状态时间线，严格单向、不倒序）。"""
+    entry = service.get_entry(entry_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"映射规则 {entry_id} 不存在或已归档")
+    items = service.get_version_table(mapping_id=entry_id)
+    return {"items": items, "total": len(items), "rule_no": entry.get("规则编号", "")}
+
+
 @router.get("/{entry_id}", response_model=dict)
 def get_entry(entry_id: int) -> dict:
     """读取单条映射规则明细；不存在时给出可读的错误说明。"""
